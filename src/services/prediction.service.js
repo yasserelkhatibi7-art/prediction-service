@@ -66,8 +66,14 @@ async function predict(features) {
     return resultado[session.outputNames[0]].data[0];
 }
 
+// Comprobar si el modelo está listo
+function isReady() {
+    return session != null;
+}
+
 module.exports = {
     initModel,
     getFeatures,
-    predict
+    predict,
+    isReady
 };
