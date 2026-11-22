@@ -84,11 +84,17 @@ prediction-service/
 | Método | Endpoint | Descripción | Formato Body | Respuesta Exitosa |
 | :---: | :--- | :--- | :--- | :--- |
 | **GET** | `/features` | Consulta los nombres de las 7 variables requeridas | Ninguno | `200 OK` `{ "features": [...] }` |
-| **POST** | `/predictions` | Realiza una predicción de consumo | `{ "features": [v1, ..., v7] }` | `200 OK` `{ "prediction": <float> }` |
+| **POST** | `/predictions` | Realiza una predicción, calcula metadatos y persiste en MongoDB | `{ "features": [v1, ..., v7], "dataId": "opcional" }` | `200 OK` `{ "predictionId": "...", "prediction": <float>, "timestamp": "...", "latencyMs": <int>, "dataId": "..." }` |
+| **GET** | `/predictions` | Obtiene el historial completo de predicciones almacenadas | Ninguno | `200 OK` `{ "predictions": [...] }` |
+| **GET** | `/predictions/:id` | Consulta una predicción por `_id` de Mongo o `predictionId` UUID | Ninguno | `200 OK` `{ "prediction": {...} }` |
+| **DELETE**| `/predictions/:id` | Elimina una predicción del registro por `_id` o `predictionId` | Ninguno | `200 OK` `{ "mensaje": "..." }` |
+| **GET** | `/health` | Liveness probe: estado general y tiempo de actividad del servicio | Ninguno | `200 OK` `{ "status": "ok", "uptime": <float> }` |
+| **GET** | `/ready` | Readiness probe: verifica modelo ONNX cargado y conexión activa con MongoDB | Ninguno | `200 OK` `{ "ready": true }` / `503 Service Unavailable` |
 
 ---
 
-## 🔮 Próximos Pasos (Pendientes)
-- Implementación de probes de monitorización y salud: `GET /health` y `GET /ready`.
-- Persistencia de registros y auditoría de predicciones en **MongoDB**.
-- Cálculo y devolución de metadatos adicionales en la predicción (`latencyMs`, `predictionId`, `timestamp`, `dataId`).
+## 💾 Persistencia y Base de Datos (MongoDB)
+- **Base de datos:** `prediction-service`
+- **Cadena de conexión por defecto:** `mongodb://127.0.0.1:27017/prediction-service` (configurable vía variable de entorno `MONGO_URI`).
+- **Colección:** `predictions` (gestionada mediante Mongoose con esquema estricto y auditoría de latencia).
+- **Control de arranque:** Si MongoDB no está iniciado (servicio manual en Windows), el servidor se inicia en modo resiliente reportando `ready: false` hasta que el servicio de BD esté activo.

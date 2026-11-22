@@ -1,6 +1,8 @@
 const ort = require("onnxruntime-node");
 const path = require("path");
 const fs = require("fs");
+const mongoose = require("mongoose");
+const Prediction = require("../models/prediction.model");
 
 // Rutas de los archivos del modelo
 const modelPath = path.join(
@@ -66,14 +68,49 @@ async function predict(features) {
     return resultado[session.outputNames[0]].data[0];
 }
 
-// Comprobar si el modelo está listo
+// Comprobar si el servicio y modelo están listos (modelo cargado y BD conectada)
 function isReady() {
-    return session != null;
+    const isModelLoaded = session != null;
+    const isDbConnected = mongoose.connection.readyState === 1;
+    return isModelLoaded && isDbConnected;
+}
+
+// Guardar predicción en MongoDB
+async function savePrediction(data) {
+    const doc = new Prediction(data);
+    return await doc.save();
+}
+
+// Consultar todas las predicciones
+async function getPredictions() {
+    return await Prediction.find();
+}
+
+// Consultar predicción por identificador (_id de Mongo o predictionId UUID)
+async function getPredictionById(id) {
+    if (mongoose.Types.ObjectId.isValid(id)) {
+        const doc = await Prediction.findById(id);
+        if (doc) return doc;
+    }
+    return await Prediction.findOne({ predictionId: id });
+}
+
+// Eliminar predicción por identificador
+async function deletePredictionById(id) {
+    if (mongoose.Types.ObjectId.isValid(id)) {
+        const doc = await Prediction.findByIdAndDelete(id);
+        if (doc) return doc;
+    }
+    return await Prediction.findOneAndDelete({ predictionId: id });
 }
 
 module.exports = {
     initModel,
     getFeatures,
     predict,
-    isReady
+    isReady,
+    savePrediction,
+    getPredictions,
+    getPredictionById,
+    deletePredictionById
 };
